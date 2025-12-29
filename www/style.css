@@ -1,0 +1,7 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: red !important; /* Force it to be RED */
+    min-height: 100vh;
+    color: white;
+}
