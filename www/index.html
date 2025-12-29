@@ -1,25 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Test App</title>
-    <style>
-        body {
-            background-color: red !important;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: sans-serif;
-        }
-        h1 { font-size: 40px; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lakhya Offline</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div>
-        <h1>IT WORKS! 🚀</h1>
-        <p>If you see this, the white screen is fixed.</p>
+
+    <div class="app-container">
+        <div class="header">
+            <h1>Lakhya 🎯</h1>
+            <p>Focus on your goal.</p>
+        </div>
+
+        <div class="glass-card">
+            <h2>Today's Progress</h2>
+            <div class="progress-track">
+                <div class="progress-fill" id="progress-bar"></div>
+            </div>
+            <p id="progress-text">0% Completed</p>
+        </div>
+
+        <ul id="task-list">
+            </ul>
+
+        <button class="fab-btn" onclick="openModal()">+</button>
     </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>New Goal</h3>
+            <input type="text" id="new-task-input" placeholder="e.g. History Chapter 4">
+            <div class="modal-buttons">
+                <button onclick="closeModal()" class="btn-cancel">Cancel</button>
+                <button onclick="addTaskFromModal()" class="btn-add">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>

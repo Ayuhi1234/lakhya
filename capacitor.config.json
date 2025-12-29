@@ -1,5 +1,8 @@
 {
   "appId": "com.lakhya.app",
   "appName": "Lakhya",
-  "webDir": "www"
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
 }
