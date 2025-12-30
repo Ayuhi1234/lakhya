@@ -3,42 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lakhya Offline</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Lakhya Pro</title>
+    <style>
+        /* --- CSS STYLES --- */
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            margin: 0; padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; color: white;
+        }
+        .app-container { padding: 20px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+        .header p { margin: 5px 0 20px; opacity: 0.8; }
+        
+        /* Glass Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px; padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        /* Progress Bar */
+        .progress-track {
+            background: rgba(0,0,0,0.2); height: 10px;
+            border-radius: 5px; margin: 15px 0; overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%; background: #4cd964; width: 0%; transition: width 0.3s ease;
+        }
+        
+        /* List Items */
+        ul { list-style: none; padding: 0; }
+        li {
+            background: rgba(255, 255, 255, 0.95); color: #333;
+            margin-bottom: 12px; padding: 15px; border-radius: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .task-info { display: flex; flex-direction: column; gap: 4px; }
+        .task-main { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+        .task-meta { font-size: 12px; color: #666; display: flex; gap: 10px; align-items: center; }
+        
+        /* Badges */
+        .badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
+        .badge-High { background: #ff3b30; }
+        .badge-Medium { background: #007aff; }
+        .badge-Low { background: #34c759; }
+
+        /* Floating Button */
+        .fab-btn {
+            position: fixed; bottom: 30px; right: 30px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: white; color: #764ba2; border: none;
+            font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Modal */
+        .hidden { display: none !important; }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(3px); z-index: 100;
+        }
+        .modal { background: white; color: black; padding: 25px; border-radius: 15px; width: 85%; max-width: 320px; }
+        .modal label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-top: 10px; }
+        .modal input, .modal select { 
+            width: 100%; padding: 10px; margin-top: 5px; 
+            border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
+        }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        button { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; }
+        .btn-add { background: #764ba2; color: white; }
+        .btn-cancel { background: #f0f0f0; color: #333; }
+    </style>
 </head>
 <body>
 
     <div class="app-container">
         <div class="header">
             <h1>Lakhya 🎯</h1>
-            <p>Focus on your goal.</p>
+            <p>Plan your success.</p>
         </div>
 
         <div class="glass-card">
-            <h2>Today's Progress</h2>
+            <h2>Daily Progress</h2>
             <div class="progress-track">
                 <div class="progress-fill" id="progress-bar"></div>
             </div>
             <p id="progress-text">0% Completed</p>
         </div>
 
-        <ul id="task-list">
-            </ul>
+        <ul id="task-list"></ul>
 
         <button class="fab-btn" onclick="openModal()">+</button>
     </div>
 
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal">
-            <h3>New Goal</h3>
-            <input type="text" id="new-task-input" placeholder="e.g. History Chapter 4">
+            <h3>New Task</h3>
+            <label>Goal</label>
+            <input type="text" id="task-input" placeholder="e.g. Physics Unit 2">
+            <label>Due Date</label>
+            <input type="date" id="date-input">
+            <label>Priority</label>
+            <select id="priority-input">
+                <option value="High">🔥 High</option>
+                <option value="Medium" selected>🔹 Medium</option>
+                <option value="Low">🌱 Low</option>
+            </select>
             <div class="modal-buttons">
                 <button onclick="closeModal()" class="btn-cancel">Cancel</button>
-                <button onclick="addTaskFromModal()" class="btn-add">Add</button>
+                <button onclick="addTask()" class="btn-add">Save</button>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // --- JAVASCRIPT LOGIC ---
+        window.onload = function() { loadTasks(); };
+
+        function openModal() {
+            document.getElementById('modal-overlay').classList.remove('hidden');
+            document.getElementById('date-input').valueAsDate = new Date();
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            document.getElementById('task-input').value = '';
+        }
+
+        function addTask() {
+            const text = document.getElementById('task-input').value.trim();
+            const date = document.getElementById('date-input').value;
+            const priority = document.getElementById('priority-input').value;
+
+            if (text) {
+                createTaskElement(text, date, priority, false);
+                saveTasks();
+                closeModal();
+            } else {
+                alert("Please enter a goal!");
+            }
+        }
+
+        function createTaskElement(text, date, priority, isDone) {
+            const list = document.getElementById('task-list');
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="task-info">
+                    <div class="task-main">
+                        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask(this)">
+                        <span style="text-decoration: ${isDone ? 'line-through' : 'none'}">${text}</span>
+                    </div>
+                    <div class="task-meta">
+                        <span class="badge badge-${priority}">${priority}</span>
+                        <span>📅 ${date}</span>
+                    </div>
+                </div>
+                <button onclick="deleteTask(this)" style="color:#ff3b30; background:none; border:none; font-size:20px;">×</button>
+            `;
+            list.appendChild(li);
+            updateProgress();
+        }
+
+        function toggleTask(checkbox) {
+            checkbox.nextElementSibling.style.textDecoration = checkbox.checked ? 'line-through' : 'none';
+            saveTasks();
+            updateProgress();
+        }
+
+        function deleteTask(btn) {
+            btn.parentElement.remove();
+            saveTasks();
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const all = document.querySelectorAll('input[type="checkbox"]');
+            const checked = document.querySelectorAll('input[type="checkbox"]:checked');
+            const percent = all.length ? Math.round((checked.length / all.length) * 100) : 0;
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('progress-text').innerText = percent + '% Completed';
+        }
+
+        function saveTasks() {
+            const tasks = [];
+            document.querySelectorAll('li').forEach(li => {
+                tasks.push({
+                    text: li.querySelector('.task-main span').innerText,
+                    date: li.querySelector('.task-meta span:last-child').innerText.replace('📅 ', ''),
+                    priority: li.querySelector('.badge').innerText,
+                    done: li.querySelector('input').checked
+                });
+            });
+            localStorage.setItem('lakhya_pro_v3', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const saved = localStorage.getItem('lakhya_pro_v3');
+            if (saved) JSON.parse(saved).forEach(t => createTaskElement(t.text, t.date, t.priority, t.done));
+        }
+    </script>
 </body>
 </html>
