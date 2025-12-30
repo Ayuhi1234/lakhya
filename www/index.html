@@ -3,209 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lakhya Pro</title>
+    <title>Lakhya Ultimate</title>
     <style>
-        /* --- CSS STYLES --- */
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body {
-            margin: 0; padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; color: white;
+        /* --- THEMES & VARIABLES --- */
+        :root {
+            --primary: #764ba2;
+            --secondary: #667eea;
+            --accent: #ff0080;
+            --bg-body: #f4f7f6;
+            --bg-card: white;
+            --text-main: #333;
+            --text-sub: #666;
+            --shadow: 0 8px 30px rgba(0,0,0,0.08);
         }
-        .app-container { padding: 20px; max-width: 600px; margin: 0 auto; padding-bottom: 100px; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
-        .header p { margin: 5px 0 20px; opacity: 0.8; }
-        
-        /* Glass Card */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 16px; padding: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        [data-theme="dark"] {
+            --primary: #8e54e9;
+            --secondary: #4776e6;
+            --accent: #ff4081;
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --shadow: 0 8px 30px rgba(0,0,0,0.4);
         }
-        
-        /* Progress Bar */
-        .progress-track {
-            background: rgba(0,0,0,0.2); height: 10px;
-            border-radius: 5px; margin: 15px 0; overflow: hidden;
+
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; transition: background 0.3s, color 0.3s; touch-action: manipulation; }
+        body { margin: 0; padding: 0; background: var(--bg-body); color: var(--text-main); min-height: 100vh; padding-bottom: 100px; overflow-x: hidden; }
+        .app-container { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+        /* --- HEADER & COMPONENTS --- */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .theme-btn { background: rgba(0,0,0,0.05); border: none; font-size: 20px; cursor: pointer; padding: 10px; border-radius: 50%; }
+
+        .level-card {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            padding: 20px; border-radius: 20px; color: white;
+            box-shadow: 0 10px 25px rgba(118, 75, 162, 0.4); margin-bottom: 25px;
         }
-        .progress-fill {
-            height: 100%; background: #4cd964; width: 0%; transition: width 0.3s ease;
+        .xp-bar-bg { background: rgba(0,0,0,0.2); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .xp-bar-fill { background: #4cd964; height: 100%; width: 0%; transition: width 0.5s ease; }
+
+        /* --- NOTEPAD --- */
+        .notepad {
+            background: var(--bg-card); padding: 15px; border-radius: 20px; box-shadow: var(--shadow);
+            margin-bottom: 20px; border-left: 5px solid var(--accent);
         }
-        
-        /* List Items */
+        .notepad textarea {
+            width: 100%; border: none; background: transparent; color: var(--text-main);
+            font-size: 14px; resize: none; outline: none; height: 60px;
+        }
+
+        /* --- FLASHCARDS --- */
+        .flashcard-container { perspective: 1000px; width: 100%; height: 250px; margin-bottom: 20px; }
+        .flashcard {
+            position: relative; width: 100%; height: 100%; text-align: center;
+            transition: transform 0.6s; transform-style: preserve-3d; cursor: pointer;
+        }
+        .flashcard.flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; font-size: 20px; font-weight: bold;
+            box-shadow: var(--shadow); background: var(--bg-card);
+            border: 1px solid rgba(0,0,0,0.05); flex-direction: column;
+        }
+        .card-back { transform: rotateY(180deg); background: var(--bg-body); color: var(--primary); border: 2px solid var(--primary); }
+        .card-controls { display: flex; justify-content: space-between; margin-top: 10px; }
+
+        /* --- ANALYTICS --- */
+        .chart-container { background: var(--bg-card); padding: 20px; border-radius: 20px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .chart-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .chart-bar-bg { flex-grow: 1; height: 8px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; margin: 0 10px; }
+        .chart-bar-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 1s ease; }
+
+        /* --- TASK LIST --- */
         ul { list-style: none; padding: 0; }
         li {
-            background: rgba(255, 255, 255, 0.95); color: #333;
-            margin-bottom: 12px; padding: 15px; border-radius: 12px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: var(--bg-card); margin-bottom: 12px; padding: 15px; border-radius: 16px;
+            display: flex; align-items: center; gap: 15px; box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
         }
-        .task-info { display: flex; flex-direction: column; gap: 4px; }
-        .task-main { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
-        .task-meta { font-size: 12px; color: #666; display: flex; gap: 10px; align-items: center; }
+        @keyframes slideIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        .task-checkbox {
+            width: 24px; height: 24px; border: 2px solid var(--primary); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .task-checkbox.checked { background: var(--primary); }
+        .task-checkbox.checked::after { content: '✓'; color: white; font-size: 14px; }
+
+        /* --- NAVIGATION --- */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--bg-card); width: 90%; max-width: 380px; height: 70px;
+            border-radius: 35px; display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15); z-index: 50;
+        }
+        .nav-item { font-size: 24px; background: none; border: none; opacity: 0.4; transition: 0.2s; position: relative; }
+        .nav-item.active { opacity: 1; transform: translateY(-5px); color: var(--primary); }
+        .nav-item.active::after { content:''; position:absolute; bottom:-8px; left:50%; transform:translateX(-50%); width:5px; height:5px; background:var(--primary); border-radius:50%; }
+
+        /* --- SECTIONS --- */
+        .section { display: none; padding-bottom: 20px; }
+        .section.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* --- UI ELEMENTS --- */
+        .fab { position: fixed; bottom: 110px; right: 25px; width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; border: none; font-size: 30px; box-shadow: 0 5px 20px rgba(118,75,162,0.4); z-index: 40; }
+        .btn-save { background: var(--primary); color: white; width: 100%; padding: 12px; border: none; border-radius: 12px; font-weight: bold; margin-top: 10px; }
+        .btn-outline { background: transparent; border: 1px solid var(--text-sub); color: var(--text-sub); padding: 8px 16px; border-radius: 20px; }
         
-        /* Badges */
-        .badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
-        .badge-High { background: #ff3b30; }
-        .badge-Medium { background: #007aff; }
-        .badge-Low { background: #34c759; }
-
-        /* Floating Button */
-        .fab-btn {
-            position: fixed; bottom: 30px; right: 30px;
-            width: 60px; height: 60px; border-radius: 50%;
-            background: white; color: #764ba2; border: none;
-            font-size: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        /* Modal */
+        /* --- MODAL --- */
         .hidden { display: none !important; }
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center;
-            backdrop-filter: blur(3px); z-index: 100;
-        }
-        .modal { background: white; color: black; padding: 25px; border-radius: 15px; width: 85%; max-width: 320px; }
-        .modal label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-top: 10px; }
-        .modal input, .modal select { 
-            width: 100%; padding: 10px; margin-top: 5px; 
-            border: 1px solid #ddd; border-radius: 8px; font-size: 14px;
-        }
-        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
-        button { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; }
-        .btn-add { background: #764ba2; color: white; }
-        .btn-cancel { background: #f0f0f0; color: #333; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal { background: var(--bg-card); width: 85%; padding: 25px; border-radius: 25px; }
+        .modal input, .modal select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 12px; background: var(--bg-body); color: var(--text-main); }
+
+        /* --- CONFETTI --- */
+        .confetti { position: fixed; width: 10px; height: 10px; top: -10px; z-index: 999; animation: fall linear forwards; }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
     </style>
 </head>
 <body>
 
     <div class="app-container">
         <div class="header">
-            <h1>Lakhya 🎯</h1>
-            <p>Plan your success.</p>
-        </div>
-
-        <div class="glass-card">
-            <h2>Daily Progress</h2>
-            <div class="progress-track">
-                <div class="progress-fill" id="progress-bar"></div>
+            <div>
+                <span style="font-size:12px; opacity:0.7; letter-spacing:1px;">LAKHYA ULTIMATE</span>
+                <h2 style="margin:0; font-weight:800;">My Dashboard</h2>
             </div>
-            <p id="progress-text">0% Completed</p>
+            <button class="theme-btn" onclick="toggleTheme()">🌙</button>
         </div>
 
-        <ul id="task-list"></ul>
+        <div class="level-card">
+            <div style="display:flex; justify-content:space-between; align-items:end;">
+                <div>
+                    <h1 style="margin:0; font-size:32px;" id="level-num">1</h1>
+                    <span style="opacity:0.8; font-size:12px;">CURRENT LEVEL</span>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-weight:bold; font-size:18px;" id="user-rank">Novice</div>
+                    <span style="font-size:12px; opacity:0.8;" id="xp-text">0 / 100 XP</span>
+                </div>
+            </div>
+            <div class="xp-bar-bg"><div class="xp-bar-fill" id="xp-fill"></div></div>
+        </div>
 
-        <button class="fab-btn" onclick="openModal()">+</button>
+        <div id="tab-dash" class="section active">
+            <div class="notepad">
+                <div style="font-size:10px; opacity:0.6; margin-bottom:5px; font-weight:bold; letter-spacing:1px;">QUICK NOTES</div>
+                <textarea id="quick-note" placeholder="Jot down a formula, homework, or idea..." oninput="saveNote()"></textarea>
+            </div>
+
+            <div class="chart-container" id="analytics-chart"></div>
+            
+            <h3 style="margin-bottom:10px;">Tasks</h3>
+            <ul id="task-list"></ul>
+            <p id="empty-msg" style="text-align:center; opacity:0.5; font-size:12px; display:none;">No active tasks.</p>
+        </div>
+
+        <div id="tab-study" class="section">
+            <h2 style="text-align:center; margin-bottom:5px;">Flashcards 🧠</h2>
+            <p style="text-align:center; opacity:0.6; font-size:12px; margin-bottom:20px;">Tap card to flip</p>
+            
+            <div id="flashcard-area">
+                <div class="flashcard-container" onclick="flipCard()">
+                    <div class="flashcard" id="active-card">
+                        <div class="card-face card-front" id="card-front">
+                            <span style="opacity:0.5; font-size:12px; position:absolute; top:20px;">QUESTION</span>
+                            <span id="fc-q">Welcome! Click 'Add New' to create cards.</span>
+                        </div>
+                        <div class="card-face card-back" id="card-back">
+                            <span style="opacity:0.5; font-size:12px; position:absolute; top:20px;">ANSWER</span>
+                            <span id="fc-a">Use these to study for exams!</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-controls">
+                    <button class="btn-outline" onclick="prevCard()">← Prev</button>
+                    <button class="btn-save" style="width:auto; margin:0;" onclick="openFCModal()">Add New</button>
+                    <button class="btn-outline" onclick="nextCard()">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-timer" class="section" style="text-align:center;">
+            <h2 style="margin-bottom:40px;">Focus Mode 🧘</h2>
+            <div style="width:220px; height:220px; border-radius:50%; background:conic-gradient(var(--primary) 0%, transparent 0%); border:1px solid rgba(0,0,0,0.1); margin:0 auto; display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow); position:relative;" id="timer-ring">
+                <div style="background:var(--bg-body); width:90%; height:90%; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:2;">
+                    <span id="timer-display" style="font-size:48px; font-weight:800;">25:00</span>
+                    <span style="font-size:12px; opacity:0.6;">MINUTES</span>
+                </div>
+            </div>
+            <button class="btn-save" onclick="toggleTimer()" id="timer-btn" style="width:160px; margin-top:40px;">Start Session</button>
+        </div>
     </div>
 
-    <div id="modal-overlay" class="modal-overlay hidden">
+    <button class="fab" id="main-fab" onclick="openModal()">+</button>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('dash')">📊</button>
+        <button class="nav-item" onclick="switchTab('study')">🧠</button>
+        <button class="nav-item" onclick="switchTab('timer')">⏳</button>
+    </div>
+
+    <div id="modal" class="modal-overlay hidden">
         <div class="modal">
-            <h3>New Task</h3>
-            <label>Goal</label>
-            <input type="text" id="task-input" placeholder="e.g. Physics Unit 2">
-            <label>Due Date</label>
-            <input type="date" id="date-input">
-            <label>Priority</label>
-            <select id="priority-input">
-                <option value="High">🔥 High</option>
-                <option value="Medium" selected>🔹 Medium</option>
-                <option value="Low">🌱 Low</option>
+            <h3>Add Task</h3>
+            <input type="text" id="inp-title" placeholder="What do you need to do?">
+            <select id="inp-cat">
+                <option value="Math">📐 Math</option>
+                <option value="Code">💻 Coding</option>
+                <option value="Science">🧬 Science</option>
+                <option value="Life">🌟 Life</option>
             </select>
-            <div class="modal-buttons">
-                <button onclick="closeModal()" class="btn-cancel">Cancel</button>
-                <button onclick="addTask()" class="btn-add">Save</button>
-            </div>
+            <button class="btn-save" onclick="saveTask()">Save Task</button>
+            <button onclick="closeModal('modal')" style="width:100%; padding:10px; border:none; background:none; margin-top:5px; color:var(--text-sub);">Cancel</button>
+        </div>
+    </div>
+
+    <div id="modal-fc" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>New Flashcard</h3>
+            <input type="text" id="fc-inp-q" placeholder="Question (Front)">
+            <input type="text" id="fc-inp-a" placeholder="Answer (Back)">
+            <button class="btn-save" onclick="saveFlashcard()">Create Card</button>
+            <button onclick="closeModal('modal-fc')" style="width:100%; padding:10px; border:none; background:none; margin-top:5px; color:var(--text-sub);">Cancel</button>
         </div>
     </div>
 
     <script>
-        // --- JAVASCRIPT LOGIC ---
-        window.onload = function() { loadTasks(); };
+        // --- APP STATE ---
+        let tasks = JSON.parse(localStorage.getItem('v8_tasks')) || [];
+        let user = JSON.parse(localStorage.getItem('v8_user')) || { xp: 0, level: 1 };
+        let flashcards = JSON.parse(localStorage.getItem('v8_cards')) || [
+            {q: "What is HTML?", a: "HyperText Markup Language"},
+            {q: "Value of Pi?", a: "3.14159"}
+        ];
+        let currentCard = 0;
 
-        function openModal() {
-            document.getElementById('modal-overlay').classList.remove('hidden');
-            document.getElementById('date-input').valueAsDate = new Date();
-        }
-        function closeModal() {
-            document.getElementById('modal-overlay').classList.add('hidden');
-            document.getElementById('task-input').value = '';
-        }
+        // --- INIT ---
+        window.onload = () => { 
+            renderTasks(); updateStats(); renderChart(); checkTheme(); 
+            document.getElementById('quick-note').value = localStorage.getItem('v8_note') || '';
+            renderCard();
+        };
 
-        function addTask() {
-            const text = document.getElementById('task-input').value.trim();
-            const date = document.getElementById('date-input').value;
-            const priority = document.getElementById('priority-input').value;
+        // --- AUDIO ENGINE (THE DING!) ---
+        function playSound(type) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-            if (text) {
-                createTaskElement(text, date, priority, false);
-                saveTasks();
-                closeModal();
-            } else {
-                alert("Please enter a goal!");
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            if (type === 'success') {
+                // A satisfying "Ding" (Sine wave with long decay)
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // 880Hz = High A
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.8); // 0.8s fade
+                osc.start();
+                osc.stop(ctx.currentTime + 0.8);
             }
         }
 
-        function createTaskElement(text, date, priority, isDone) {
-            const list = document.getElementById('task-list');
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div class="task-info">
-                    <div class="task-main">
-                        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTask(this)">
-                        <span style="text-decoration: ${isDone ? 'line-through' : 'none'}">${text}</span>
+        // --- CORE FUNCTIONS ---
+        function saveTask() {
+            const title = document.getElementById('inp-title').value;
+            const cat = document.getElementById('inp-cat').value;
+            if(title) {
+                tasks.push({ id: Date.now(), title, cat, done: false });
+                saveData(); closeModal('modal'); renderTasks(); renderChart();
+            }
+        }
+
+        function toggleDone(id) {
+            const t = tasks.find(x => x.id == id);
+            if (!t.done) { 
+                addXP(20); 
+                playSound('success'); // <--- PLAY SOUND HERE
+            }
+            t.done = !t.done;
+            saveData(); renderTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(x => x.id != id);
+            saveData(); renderTasks(); renderChart();
+        }
+
+        function saveNote() {
+            localStorage.setItem('v8_note', document.getElementById('quick-note').value);
+        }
+
+        // --- FLASHCARD LOGIC ---
+        function openFCModal() { document.getElementById('modal-fc').classList.remove('hidden'); }
+        function saveFlashcard() {
+            const q = document.getElementById('fc-inp-q').value;
+            const a = document.getElementById('fc-inp-a').value;
+            if(q && a) {
+                flashcards.push({q, a});
+                localStorage.setItem('v8_cards', JSON.stringify(flashcards));
+                closeModal('modal-fc');
+                currentCard = flashcards.length - 1;
+                renderCard();
+            }
+        }
+        function flipCard() { document.getElementById('active-card').classList.toggle('flipped'); }
+        function nextCard() { if(currentCard < flashcards.length-1) { currentCard++; renderCard(); } }
+        function prevCard() { if(currentCard > 0) { currentCard--; renderCard(); } }
+        function renderCard() {
+            const c = flashcards[currentCard];
+            const el = document.getElementById('active-card');
+            el.classList.remove('flipped'); // Reset flip
+            setTimeout(() => {
+                document.getElementById('fc-q').innerText = c.q;
+                document.getElementById('fc-a').innerText = c.a;
+            }, 200);
+        }
+
+        // --- GAMIFICATION & CONFETTI ---
+        function addXP(amount) {
+            user.xp += amount;
+            if (user.xp >= 100) {
+                user.level++; user.xp -= 100;
+                playSound('success'); fireConfetti();
+                alert("🎉 LEVEL UP! You are now Level " + user.level);
+            }
+            saveData(); updateStats();
+        }
+
+        function fireConfetti() {
+            for(let i=0; i<50; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = ['#ff0000', '#00ff00', '#0000ff', '#ffff00'][Math.floor(Math.random()*4)];
+                c.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5000);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('level-num').innerText = user.level;
+            document.getElementById('xp-text').innerText = user.xp + "/100 XP";
+            document.getElementById('xp-fill').style.width = user.xp + "%";
+            const ranks = ["Novice", "Apprentice", "Scholar", "Master", "Grandmaster"];
+            document.getElementById('user-rank').innerText = ranks[Math.min(user.level-1, 4)];
+        }
+
+        // --- RENDER UI ---
+        function renderTasks() {
+            const list = document.getElementById('task-list'); list.innerHTML = "";
+            const activeTasks = tasks.filter(t => !t.done);
+            if(activeTasks.length === 0) document.getElementById('empty-msg').style.display = 'block';
+            else document.getElementById('empty-msg').style.display = 'none';
+
+            // Show active first, then done
+            tasks.sort((a,b) => a.done - b.done).forEach(t => {
+                const li = document.createElement('li');
+                li.style.opacity = t.done ? "0.5" : "1";
+                li.innerHTML = `
+                    <div class="task-checkbox ${t.done ? 'checked' : ''}" onclick="toggleDone(${t.id})"></div>
+                    <div style="flex-grow:1">
+                        <div style="font-weight:700; text-decoration: ${t.done ? 'line-through' : 'none'}">${t.title}</div>
+                        <div style="font-size:11px; opacity:0.6; text-transform:uppercase; margin-top:2px;">${t.cat}</div>
                     </div>
-                    <div class="task-meta">
-                        <span class="badge badge-${priority}">${priority}</span>
-                        <span>📅 ${date}</span>
-                    </div>
-                </div>
-                <button onclick="deleteTask(this)" style="color:#ff3b30; background:none; border:none; font-size:20px;">×</button>
-            `;
-            list.appendChild(li);
-            updateProgress();
-        }
-
-        function toggleTask(checkbox) {
-            checkbox.nextElementSibling.style.textDecoration = checkbox.checked ? 'line-through' : 'none';
-            saveTasks();
-            updateProgress();
-        }
-
-        function deleteTask(btn) {
-            btn.parentElement.remove();
-            saveTasks();
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const all = document.querySelectorAll('input[type="checkbox"]');
-            const checked = document.querySelectorAll('input[type="checkbox"]:checked');
-            const percent = all.length ? Math.round((checked.length / all.length) * 100) : 0;
-            document.getElementById('progress-bar').style.width = percent + '%';
-            document.getElementById('progress-text').innerText = percent + '% Completed';
-        }
-
-        function saveTasks() {
-            const tasks = [];
-            document.querySelectorAll('li').forEach(li => {
-                tasks.push({
-                    text: li.querySelector('.task-main span').innerText,
-                    date: li.querySelector('.task-meta span:last-child').innerText.replace('📅 ', ''),
-                    priority: li.querySelector('.badge').innerText,
-                    done: li.querySelector('input').checked
-                });
+                    <button onclick="deleteTask(${t.id})" style="border:none; background:none; color:var(--text-sub);">×</button>
+                `;
+                list.appendChild(li);
             });
-            localStorage.setItem('lakhya_pro_v3', JSON.stringify(tasks));
         }
 
-        function loadTasks() {
-            const saved = localStorage.getItem('lakhya_pro_v3');
-            if (saved) JSON.parse(saved).forEach(t => createTaskElement(t.text, t.date, t.priority, t.done));
+        function renderChart() {
+            const cats = { Math: 0, Code: 0, Science: 0, Life: 0 };
+            tasks.forEach(t => { if(!t.done) cats[t.cat]++; });
+            const total = Object.values(cats).reduce((a,b)=>a+b, 0) || 1;
+            const colors = { Math: '#4facfe', Code: '#43e97b', Science: '#fa709a', Life: '#f6d365' };
+            
+            let html = '';
+            for (let c in cats) {
+                let pct = (cats[c] / total) * 100;
+                html += `<div class="chart-row"><div style="width:60px; font-size:12px; font-weight:bold;">${c}</div><div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%; background:${colors[c]}"></div></div><div style="width:30px; text-align:right; font-size:12px;">${cats[c]}</div></div>`;
+            }
+            document.getElementById('analytics-chart').innerHTML = html;
         }
+
+        function saveData() { localStorage.setItem('v8_tasks', JSON.stringify(tasks)); localStorage.setItem('v8_user', JSON.stringify(user)); }
+        
+        // --- NAVIGATION & UTILS ---
+        function switchTab(id) {
+            document.querySelectorAll('.section').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            event.currentTarget.classList.add('active');
+            document.getElementById('main-fab').style.display = (id === 'study' || id === 'timer') ? 'none' : 'flex';
+        }
+        function openModal() { document.getElementById('modal').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function toggleTheme() {
+            const b = document.body; const n = b.getAttribute('data-theme')==='dark'?'light':'dark';
+            b.setAttribute('data-theme', n); localStorage.setItem('theme', n);
+        }
+        function checkTheme() { const t = localStorage.getItem('theme'); if(t) document.body.setAttribute('data-theme', t); }
+
+        // --- TIMER ---
+        let timer=null; let time=1500; let isRunning=false;
+        function toggleTimer() {
+            if(isRunning) { clearInterval(timer); document.getElementById('timer-btn').innerText="Start Session"; }
+            else {
+                timer=setInterval(()=>{
+                    time--; 
+                    document.getElementById('timer-display').innerText = 
+                        `${Math.floor(time/60).toString().padStart(2,'0')}:${(time%60).toString().padStart(2,'0')}`;
+                    if(time<=0) { clearInterval(timer); playSound('success'); alert("Done!"); addXP(50); fireConfetti(); resetTimer(); }
+                },1000);
+                document.getElementById('timer-btn').innerText="Pause";
+            }
+            isRunning=!isRunning;
+        }
+        function resetTimer(){ clearInterval(timer); isRunning=false; time=1500; document.getElementById('timer-display').innerText="25:00"; }
     </script>
 </body>
 </html>
