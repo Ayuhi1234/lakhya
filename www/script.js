@@ -17,7 +17,10 @@ window.onload = () => {
     renderCalendarStrip();
     renderTasks();
     renderYearMap();
-    setInterval(checkNotifications, 60000); 
+    
+    // Check for notifications every second to hit the exact time
+    setInterval(checkNotifications, 1000); 
+
     document.getElementById('date-label').innerText = new Date().toDateString();
 
     const savedSound = localStorage.getItem('lakhya_sound_pref') || 'beep';
@@ -152,7 +155,7 @@ function renderTasks() {
     });
 }
 
-// --- 7. NOTIFICATIONS & SOUND ---
+// --- 7. NOTIFICATIONS (UPDATED LOGIC) ---
 function changeSound() {
     const selected = document.getElementById('sound-select').value;
     currentAudio = new Audio(SOUNDS[selected]);
@@ -175,21 +178,35 @@ function checkNotifications() {
     const tasks = schedule[now.toISOString().split('T')[0]] || [];
     
     tasks.forEach(t => {
+        // Precise Minute Match
         if(!t.done && t.alertTime === now.getHours()) {
             let targetMin = t.alertMin || 0;
-            if(now.getMinutes() === targetMin) {
-                currentAudio.play();
-                if(Notification.permission==="granted") {
+            
+            // Trigger exactly at the 0th second of that minute
+            if(now.getMinutes() === targetMin && now.getSeconds() < 2) {
+                
+                // 1. PLAY AUDIO (Foreground)
+                currentAudio.play().catch(e => console.log("Audio blocked:", e));
+
+                // 2. SHOW POPUP (Background/System)
+                if(Notification.permission === "granted") {
+                    
+                    const title = "🔔 Lakhya: " + t.title;
+                    const options = {
+                        body: "Time to focus! Tap to open.",
+                        icon: "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
+                        vibrate: [200, 100, 200, 100, 200], // Buzz-Buzz-Buzz
+                        tag: "lakhya-" + t.title, 
+                        requireInteraction: true,
+                        data: { url: window.location.href }
+                    };
+
                     if(navigator.serviceWorker && navigator.serviceWorker.controller) {
                         navigator.serviceWorker.ready.then(reg => {
-                            reg.showNotification("Lakhya: " + t.title, {
-                                body: "Time to focus! 🎯",
-                                icon: "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
-                                vibrate: [200, 100, 200], tag: "lakhya-alert"
-                            });
+                            reg.showNotification(title, options);
                         });
                     } else {
-                        new Notification("Lakhya: " + t.title);
+                        new Notification(title, options);
                     }
                 }
             }
@@ -197,13 +214,49 @@ function checkNotifications() {
     });
 }
 
-// --- 8. UTILS ---
+// --- 8. VISUALS (DATES & YEAR MAP) ---
+function renderCalendarStrip() { 
+    const strip = document.getElementById('calendar-strip'); 
+    strip.innerHTML = ""; 
+    const today = new Date(); 
+    for(let i=0; i<14; i++) { 
+        let d = new Date(); d.setDate(today.getDate() + i); 
+        let key = d.toISOString().split('T')[0]; 
+        let hasTasks = schedule[key] && schedule[key].length > 0 ? 'has-tasks' : ''; 
+        let isActive = key === selectedDate ? 'active' : ''; 
+        let div = document.createElement('div'); 
+        div.className = `date-card ${isActive} ${hasTasks}`; 
+        div.innerHTML = `<span class="day-name">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="day-num">${d.getDate()}</span><div class="dot"></div>`; 
+        div.onclick = () => { selectedDate = key; renderCalendarStrip(); renderTasks(); }; 
+        strip.appendChild(div); 
+    } 
+}
+
+function renderYearMap() { 
+    const container = document.getElementById('year-grid-container'); 
+    if(!container) return; 
+    container.innerHTML = ""; 
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    for(let m=0; m<12; m++) { 
+        const monthDiv = document.createElement('div'); monthDiv.className = 'month-box'; 
+        monthDiv.innerHTML = `<div class="month-title">${months[m]}</div>`;
+        const grid = document.createElement('div'); grid.className = 'days-grid'; 
+        const days = new Date(2026, m+1, 0).getDate(); 
+        for(let d=1; d<=days; d++) { 
+            let key = `2026-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`; 
+            const dot = document.createElement('div'); dot.className = 'day-dot'; 
+            if(schedule[key] && schedule[key].some(t=>t.done)) dot.classList.add('active'); 
+            grid.appendChild(dot); 
+        } 
+        monthDiv.appendChild(grid); container.appendChild(monthDiv); 
+    } 
+}
+
+// --- 9. UTILS ---
 function toggleDone(i) { schedule[selectedDate][i].done = !schedule[selectedDate][i].done; saveData(); renderTasks(); renderYearMap(); }
 function deleteTask(i) { schedule[selectedDate].splice(i, 1); saveData(); renderTasks(); renderYearMap(); }
 function studyNow(title, cat) { window.open(`https://www.google.com/search?q=${title} ${cat}`, '_blank'); }
 let timer=null; function startFocus(title){ document.getElementById('zen-task-title').innerText = title; document.getElementById('zen-overlay').classList.add('active'); let t=1500; timer=setInterval(()=>{ t--; let m=Math.floor(t/60),s=t%60; document.getElementById('zen-timer-display').innerText=`${m}:${s<10?'0':''}${s}`; if(t<=0) stopFocus(); },1000); } function stopFocus(){ clearInterval(timer); document.getElementById('zen-overlay').classList.remove('active'); }
 function toggleTimer(){ if(timer) stopFocus(); else startFocus("Manual Session"); }
-function renderCalendarStrip() { const strip = document.getElementById('calendar-strip'); strip.innerHTML = ""; const today = new Date(); for(let i=0; i<14; i++) { let d = new Date(); d.setDate(today.getDate() + i); let key = d.toISOString().split('T')[0]; let hasTasks = schedule[key] && schedule[key].length > 0 ? 'has-tasks' : ''; let isActive = key === selectedDate ? 'active' : ''; let div = document.createElement('div'); div.className = `date-card ${isActive} ${hasTasks}`; div.innerHTML = `<span class="day-name">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="day-num">${d.getDate()}</span><div class="dot"></div>`; div.onclick = () => { selectedDate = key; renderCalendarStrip(); renderTasks(); }; strip.appendChild(div); } }
-function renderYearMap() { const container = document.getElementById('year-grid-container'); if(!container) return; container.innerHTML = ""; for(let m=0; m<12; m++) { const monthDiv = document.createElement('div'); monthDiv.className = 'month-box'; const grid = document.createElement('div'); grid.className = 'days-grid'; const days = new Date(2026, m+1, 0).getDate(); for(let d=1; d<=days; d++) { let key = `2026-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`; const dot = document.createElement('div'); dot.className = 'day-dot'; if(schedule[key] && schedule[key].some(t=>t.done)) dot.classList.add('active'); grid.appendChild(dot); } monthDiv.appendChild(grid); container.appendChild(monthDiv); } }
 function switchView(id, btn) { document.querySelectorAll('.section').forEach(e=>e.style.display='none'); document.getElementById('view-'+id).style.display='block'; document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); btn.classList.add('active'); if(id==='year') renderYearMap(); }
 function saveData() { localStorage.setItem('lakhya_pwa_final_db', JSON.stringify(schedule)); localStorage.setItem('lakhya_pwa_final_user', JSON.stringify(user)); }
