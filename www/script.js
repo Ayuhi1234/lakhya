@@ -1,8 +1,10 @@
 // --- 1. CONFIG & DATA ---
+// Load data from phone storage
 let schedule = JSON.parse(localStorage.getItem('lakhya_pwa_final_db')) || {};
 let user = JSON.parse(localStorage.getItem('lakhya_pwa_final_user')) || { xp: 0, level: 1 };
 let selectedDate = new Date().toISOString().split('T')[0];
 
+// Funny Sounds Library
 const SOUNDS = {
     beep: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg',
     boing: 'https://actions.google.com/sounds/v1/cartoon/boing_spring.ogg',
@@ -12,28 +14,34 @@ const SOUNDS = {
 };
 let currentAudio = new Audio(SOUNDS.beep);
 
-// --- 2. INIT ---
+// --- 2. INITIALIZATION (Runs when app opens) ---
 window.onload = () => {
     renderCalendarStrip();
     renderTasks();
     renderYearMap();
     
-    // Check for notifications every second to hit the exact time
+    // Check for notifications EVERY SECOND to be precise
     setInterval(checkNotifications, 1000); 
 
+    // Set today's date in header
     document.getElementById('date-label').innerText = new Date().toDateString();
 
+    // Load saved sound preference
     const savedSound = localStorage.getItem('lakhya_sound_pref') || 'beep';
     if(document.getElementById('sound-select')) document.getElementById('sound-select').value = savedSound;
     currentAudio = new Audio(SOUNDS[savedSound]);
 
+    // Check if notifications are already allowed
     if("Notification" in window && Notification.permission === "granted") {
-        document.getElementById('btn-notify').classList.add('active');
-        document.getElementById('btn-notify').innerText = "🔔 Active";
+        const btn = document.getElementById('btn-notify');
+        if(btn) {
+            btn.classList.add('active');
+            btn.innerText = "🔔 Active";
+        }
     }
 };
 
-// --- 3. HELPER: TIME FORMAT ---
+// --- 3. HELPER: TIME FORMATTER ---
 function formatTime(hour, min) {
     if (hour === null || hour === undefined || isNaN(hour)) return "";
     const mStr = (min || 0).toString().padStart(2, '0');
@@ -50,6 +58,7 @@ function addTask() {
 
     if(title) {
         if(!schedule[selectedDate]) schedule[selectedDate] = [];
+        
         let h = null, m = null, disp = "";
         if(timeStr) {
             const parts = timeStr.split(':');
@@ -57,14 +66,25 @@ function addTask() {
             m = parseInt(parts[1]);
             disp = formatTime(h, m);
         }
-        schedule[selectedDate].push({ title, desc: "Manual Task", cat, alertTime: h, alertMin: m, timeDisp: disp, done: false });
+
+        schedule[selectedDate].push({ 
+            title, desc: "Manual Task", cat, 
+            alertTime: h, alertMin: m, timeDisp: disp, 
+            done: false 
+        });
+        
         saveData(); 
         document.getElementById('modal-add').style.display='none';
+        
+        // Reset inputs
+        document.getElementById('inp-title').value = "";
+        document.getElementById('inp-time').value = "";
+        
         renderTasks(); renderCalendarStrip(); renderYearMap();
     }
 }
 
-// --- 5. AI PARSER ---
+// --- 5. AI PARSER (Smart Text Reader) ---
 function parseComplexAI() {
     const text = document.getElementById('ai-input').value;
     if(!text) return;
@@ -77,36 +97,43 @@ function parseComplexAI() {
         const l = line.trim(); const lower = l.toLowerCase();
         if (!l) return;
 
-        // Detect Day
+        // A. Detect Day (e.g., "Monday")
         const dayMatch = lower.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
         if (dayMatch) { currentParseDate = getNextDateForDay(dayMatch[0]); return; }
 
-        // Detect Time
+        // B. Detect Time (e.g., "2:00 PM")
         const timeMatch = l.match(/(\d{1,2}):(\d{2})\s?(?:–|-|to)?.*?(AM|PM|am|pm)/i);
         if (timeMatch) {
             let hour = parseInt(timeMatch[1]);
             const minutes = parseInt(timeMatch[2]);
             const period = timeMatch[3].toUpperCase();
+            
             if (period === 'PM' && hour < 12) hour += 12;
             if (period === 'AM' && hour === 12) hour = 0;
+            
             const disp = formatTime(hour, minutes);
             lastTime = { h: hour, m: minutes, disp: disp };
             
-            // Check same line for task
+            // C. Check if Task is on SAME line (e.g. "2:00 PM - Study")
             let leftover = l.replace(timeMatch[0], "").replace(/^[-–:]\s*/, "").trim();
             if(leftover.length > 2 && currentParseDate) {
-                insertTask(currentParseDate, leftover, lastTime); count++; lastTime = null;
+                insertTask(currentParseDate, leftover, lastTime);
+                count++;
+                lastTime = null; // Used it, so reset
             }
             return;
         }
 
-        // Detect Task (Next Line)
+        // D. Detect Task on NEXT line
         if (currentParseDate && lastTime && l.length > 2) {
-            insertTask(currentParseDate, l, lastTime); count++; lastTime = null;
+            insertTask(currentParseDate, l, lastTime);
+            count++;
+            lastTime = null;
         }
     });
 
-    saveData(); document.getElementById('modal-ai').style.display = 'none';
+    saveData();
+    document.getElementById('modal-ai').style.display = 'none';
     renderCalendarStrip(); renderTasks(); renderYearMap();
     alert(`🤖 Scheduled ${count} tasks!`);
 }
@@ -120,8 +147,14 @@ function insertTask(dateObj, titleStr, timeObj) {
     
     let dateKey = dateObj.toISOString().split('T')[0];
     if (!schedule[dateKey]) schedule[dateKey] = [];
-    titleStr = titleStr.replace(/^[-\u2022]\s*/, "");
-    schedule[dateKey].push({ title: titleStr, desc: "AI Plan", cat: cat, alertTime: timeObj.h, alertMin: timeObj.m, timeDisp: timeObj.disp, done: false });
+    
+    titleStr = titleStr.replace(/^[-\u2022]\s*/, ""); // Clean bullets
+    
+    schedule[dateKey].push({
+        title: titleStr, desc: "AI Plan", cat: cat,
+        alertTime: timeObj.h, alertMin: timeObj.m, timeDisp: timeObj.disp,
+        done: false
+    });
 }
 
 function getNextDateForDay(dayName) {
@@ -129,33 +162,45 @@ function getNextDateForDay(dayName) {
     const targetIdx = days.indexOf(dayName);
     const d = new Date();
     let dist = targetIdx - d.getDay();
-    if (dist < 0) dist += 7;
+    if (dist < 0) dist += 7; // Only future days
     d.setDate(d.getDate() + dist);
     return d;
 }
 
-// --- 6. RENDERER ---
+// --- 6. RENDER TASKS (The List) ---
 function renderTasks() {
     const list = document.getElementById('task-list');
     list.innerHTML = "";
     const tasks = schedule[selectedDate] || [];
     document.getElementById('empty-state').style.display = tasks.length===0?'block':'none';
+
+    // Sort by Time
     tasks.sort((a,b) => (a.alertTime - b.alertTime) || (a.alertMin - b.alertMin));
 
     tasks.forEach((t, i) => {
         const li = document.createElement('li');
         li.className = `task-card cat-${t.cat} ${t.done?'done':''}`;
         let timeDisplay = t.timeDisp || "Anytime";
+
         li.innerHTML = `
-            <div class="task-header"><div class="check-circle" onclick="toggleDone(${i})"></div>
-            <div class="task-content"><span class="time-badge">⏰ ${timeDisplay}</span><div class="task-title">${t.title}</div></div></div>
-            <div class="task-actions"><button class="btn-mini btn-study" onclick="studyNow('${t.title}', '${t.cat}')">⚡ Study</button><button class="btn-mini btn-focus" onclick="startFocus('${t.title}')">🔥 Focus</button><button class="btn-mini" onclick="deleteTask(${i})">🗑️</button></div>
+            <div class="task-header">
+                <div class="check-circle" onclick="toggleDone(${i})"></div>
+                <div class="task-content">
+                    <span class="time-badge">⏰ ${timeDisplay}</span>
+                    <div class="task-title">${t.title}</div>
+                </div>
+            </div>
+            <div class="task-actions">
+                <button class="btn-mini btn-study" onclick="studyNow('${t.title}', '${t.cat}')">⚡ Study</button>
+                <button class="btn-mini btn-focus" onclick="startFocus('${t.title}')">🔥 Focus</button>
+                <button class="btn-mini" onclick="deleteTask(${i})">🗑️</button>
+            </div>
         `;
         list.appendChild(li);
     });
 }
 
-// --- 7. NOTIFICATIONS (UPDATED LOGIC) ---
+// --- 7. NOTIFICATIONS (AGGRESSIVE POPUP MODE) ---
 function changeSound() {
     const selected = document.getElementById('sound-select').value;
     currentAudio = new Audio(SOUNDS[selected]);
@@ -166,10 +211,12 @@ function changeSound() {
 function activateAudio() {
     currentAudio.play().then(() => {
         currentAudio.pause(); currentAudio.currentTime = 0;
+        // Request Permission
         if("Notification" in window) Notification.requestPermission();
+        
         document.getElementById('btn-notify').classList.add('active');
         document.getElementById('btn-notify').innerText = "🔔 Active";
-        alert("Sound Enabled!");
+        alert("Sound Enabled! Don't close the app (minimize only).");
     });
 }
 
@@ -195,17 +242,20 @@ function checkNotifications() {
                     const options = {
                         body: "Time to focus! Tap to open.",
                         icon: "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
-                        vibrate: [200, 100, 200, 100, 200], // Buzz-Buzz-Buzz
-                        tag: "lakhya-" + t.title, 
-                        requireInteraction: true,
+                        vibrate: [500, 200, 500],   // Strong Buzz
+                        tag: "lakhya-" + Date.now(), // UNIQUE ID: Forces new popup
+                        renotify: true,              // Forces sound/vibrate again
+                        requireInteraction: true,    // Stays on screen
                         data: { url: window.location.href }
                     };
 
+                    // Try Service Worker (Best for Mobile)
                     if(navigator.serviceWorker && navigator.serviceWorker.controller) {
                         navigator.serviceWorker.ready.then(reg => {
                             reg.showNotification(title, options);
                         });
                     } else {
+                        // Fallback for PC
                         new Notification(title, options);
                     }
                 }
@@ -214,7 +264,7 @@ function checkNotifications() {
     });
 }
 
-// --- 8. VISUALS (DATES & YEAR MAP) ---
+// --- 8. VISUALS (Calendar & Year Map) ---
 function renderCalendarStrip() { 
     const strip = document.getElementById('calendar-strip'); 
     strip.innerHTML = ""; 
@@ -224,6 +274,7 @@ function renderCalendarStrip() {
         let key = d.toISOString().split('T')[0]; 
         let hasTasks = schedule[key] && schedule[key].length > 0 ? 'has-tasks' : ''; 
         let isActive = key === selectedDate ? 'active' : ''; 
+        
         let div = document.createElement('div'); 
         div.className = `date-card ${isActive} ${hasTasks}`; 
         div.innerHTML = `<span class="day-name">${d.toLocaleDateString('en-US',{weekday:'short'})}</span><span class="day-num">${d.getDate()}</span><div class="dot"></div>`; 
@@ -237,11 +288,13 @@ function renderYearMap() {
     if(!container) return; 
     container.innerHTML = ""; 
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
     for(let m=0; m<12; m++) { 
         const monthDiv = document.createElement('div'); monthDiv.className = 'month-box'; 
         monthDiv.innerHTML = `<div class="month-title">${months[m]}</div>`;
         const grid = document.createElement('div'); grid.className = 'days-grid'; 
         const days = new Date(2026, m+1, 0).getDate(); 
+        
         for(let d=1; d<=days; d++) { 
             let key = `2026-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`; 
             const dot = document.createElement('div'); dot.className = 'day-dot'; 
@@ -252,11 +305,55 @@ function renderYearMap() {
     } 
 }
 
-// --- 9. UTILS ---
-function toggleDone(i) { schedule[selectedDate][i].done = !schedule[selectedDate][i].done; saveData(); renderTasks(); renderYearMap(); }
-function deleteTask(i) { schedule[selectedDate].splice(i, 1); saveData(); renderTasks(); renderYearMap(); }
-function studyNow(title, cat) { window.open(`https://www.google.com/search?q=${title} ${cat}`, '_blank'); }
-let timer=null; function startFocus(title){ document.getElementById('zen-task-title').innerText = title; document.getElementById('zen-overlay').classList.add('active'); let t=1500; timer=setInterval(()=>{ t--; let m=Math.floor(t/60),s=t%60; document.getElementById('zen-timer-display').innerText=`${m}:${s<10?'0':''}${s}`; if(t<=0) stopFocus(); },1000); } function stopFocus(){ clearInterval(timer); document.getElementById('zen-overlay').classList.remove('active'); }
-function toggleTimer(){ if(timer) stopFocus(); else startFocus("Manual Session"); }
-function switchView(id, btn) { document.querySelectorAll('.section').forEach(e=>e.style.display='none'); document.getElementById('view-'+id).style.display='block'; document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); btn.classList.add('active'); if(id==='year') renderYearMap(); }
-function saveData() { localStorage.setItem('lakhya_pwa_final_db', JSON.stringify(schedule)); localStorage.setItem('lakhya_pwa_final_user', JSON.stringify(user)); }
+// --- 9. UTILITIES ---
+function toggleDone(i) { 
+    schedule[selectedDate][i].done = !schedule[selectedDate][i].done; 
+    saveData(); renderTasks(); renderYearMap(); 
+}
+
+function deleteTask(i) { 
+    schedule[selectedDate].splice(i, 1); 
+    saveData(); renderTasks(); renderCalendarStrip(); renderYearMap(); 
+}
+
+function studyNow(title, cat) { 
+    let url = cat === "Tech" || cat === "Project" 
+        ? `https://www.youtube.com/results?search_query=${title}` 
+        : `https://www.google.com/search?q=UPSC+${title}`;
+    window.open(url, '_blank'); 
+}
+
+// Zen Timer Logic
+let timer=null; 
+function startFocus(title){ 
+    document.getElementById('zen-task-title').innerText = title; 
+    document.getElementById('zen-overlay').classList.add('active'); 
+    let t=1500; // 25 mins
+    timer=setInterval(()=>{ 
+        t--; 
+        let m=Math.floor(t/60), s=t%60; 
+        document.getElementById('zen-timer-display').innerText=`${m}:${s<10?'0':''}${s}`; 
+        if(t<=0) stopFocus(); 
+    },1000); 
+} 
+function stopFocus(){ 
+    clearInterval(timer); 
+    document.getElementById('zen-overlay').classList.remove('active'); 
+}
+function toggleTimer(){ 
+    if(timer) stopFocus(); else startFocus("Manual Session"); 
+}
+
+// Navigation
+function switchView(id, btn) { 
+    document.querySelectorAll('.section').forEach(e=>e.style.display='none'); 
+    document.getElementById('view-'+id).style.display='block'; 
+    document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); 
+    btn.classList.add('active'); 
+    if(id==='year') renderYearMap(); 
+}
+
+function saveData() { 
+    localStorage.setItem('lakhya_pwa_final_db', JSON.stringify(schedule)); 
+    localStorage.setItem('lakhya_pwa_final_user', JSON.stringify(user)); 
+}
